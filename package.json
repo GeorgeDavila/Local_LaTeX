@@ -1,0 +1,30 @@
+{
+  "name": "Local_LaTeX",
+  "version": "0.0.1",
+  "description": "Local_LaTeX",
+  "keywords": [
+    "browser"
+  ],
+  "homepage": "https://github.com/GeorgeDavila/Local_LaTeX#readme",
+  "bugs": {
+    "url": "https://github.com/GeorgeDavila/Local_LaTeX/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GeorgeDavila/Local_LaTeX.git"
+  },
+  "license": "MIT",
+  "author": "George Davila Durendal",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "test"
+  },
+  "devDependencies": {
+    "electron": "^43.3.0"
+  },
+  "dependencies": {
+    "latex.js": "^0.12.6"
+  }
+}

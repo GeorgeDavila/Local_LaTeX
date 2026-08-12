@@ -1,0 +1,310 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+
+/* Header matching original */
+header {
+  background: #000033;
+  color: white;
+  height: 56px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  padding: 0 0 0 1.5rem;
+  flex-shrink: 0;
+}
+header .logo {
+  font-size: 1.35rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.4rem;
+  margin-right: 1.25rem;
+}
+header .logo .latex {
+  font-family: "Times New Roman", Times, serif;
+}
+header .logo .latex span { font-size: 0.8em; position: relative; top: 0.15em; }
+#current-project-name {
+  margin-right: 0.75rem;
+}
+header nav {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+}
+header nav a {
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+header nav a:hover, header nav a.active { color: white; }
+#save-btn,
+#projects-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 1.15rem;
+  margin: 0;
+  border-radius: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+#save-btn:hover,
+#projects-btn:hover {
+  background: #2d9961;
+  color: white;
+}
+#save-btn {
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+#save-btn.saving {
+  pointer-events: none;
+  background: #2d9961;
+  color: white;
+  animation: save-pulse 0.55s ease;
+}
+#save-btn.saved {
+  background: #2d9961;
+  color: white;
+  box-shadow: 0 0 0 3px rgba(45, 153, 97, 0.35);
+}
+@keyframes save-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+#workspace {
+  display: flex;
+  height: calc(100% - 56px);
+  overflow: hidden;
+}
+
+/* Projects sidebar */
+#projects-sidebar {
+  width: 0;
+  overflow: hidden;
+  background: #1e1f1c;
+  color: #f8f8f2;
+  border-right: 0 solid #3a3b35;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.2s ease, border-width 0.2s ease;
+}
+#projects-sidebar.open {
+  width: 240px;
+  border-right-width: 1px;
+}
+#projects-sidebar .sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid #3a3b35;
+  flex-shrink: 0;
+}
+#projects-sidebar .sidebar-header h2 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a6a69c;
+  white-space: nowrap;
+}
+.sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+#new-project-btn {
+  border: none;
+  background: #2d9961;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#new-project-btn:hover { background: #248a55; }
+#close-projects-btn {
+  border: none;
+  background: transparent;
+  color: #e74c3c;
+  font-size: 1.25rem;
+  line-height: 1;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#close-projects-btn:hover {
+  background: rgba(231, 76, 60, 0.18);
+  color: #ff6b5a;
+}
+
+#project-list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.4rem 0;
+}
+#project-list li {
+  margin: 0;
+}
+#project-list button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: #f8f8f2;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#project-list button:hover { background: #2a2b26; }
+#project-list button.active {
+  background: #2d9961;
+  color: white;
+}
+#project-list .empty {
+  padding: 1rem 0.9rem;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+#playground {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+#editor-pane, #preview-pane {
+  height: 100%;
+  overflow: hidden;
+}
+#editor-pane { background: #272822; }
+.CodeMirror {
+  height: 100% !important;
+  font-size: 14px;
+  font-family: "Fira Code", "Consolas", "Monaco", monospace;
+}
+#gutter {
+  width: 8px;
+  background: #e8e8e8;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#gutter::before {
+  content: "";
+  width: 2px;
+  height: 40px;
+  border-left: 1px solid #bbb;
+  border-right: 1px solid #bbb;
+}
+#gutter:hover::before { border-color: #666; }
+
+#preview {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+/* Save modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal[hidden] { display: none; }
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+.modal-panel {
+  position: relative;
+  width: min(420px, calc(100vw - 2rem));
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.25rem 1.35rem 1.1rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+.modal-panel h2 {
+  font-size: 1.15rem;
+  margin-bottom: 0.4rem;
+  color: #222;
+}
+.modal-panel p {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+.modal-panel label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.35rem;
+}
+.modal-panel input {
+  width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1.1rem;
+}
+.modal-panel input:focus {
+  outline: 2px solid #2d9961;
+  outline-offset: 1px;
+  border-color: #2d9961;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.modal-actions button {
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.btn-secondary {
+  background: #f3f3f3;
+  border-color: #ddd;
+  color: #333;
+}
+.btn-secondary:hover { background: #e9e9e9; }
+.btn-primary {
+  background: #2d9961;
+  color: white;
+}
+.btn-primary:hover { background: #248a55; }
+
