@@ -1,1 +1,3 @@
 node_modules/ 
+tex_projects/*.pdf
+!tex_projects/starter.pdf
