@@ -1,2 +1,2 @@
 # Local_LaTeX
-Local LaTeX text editor 
+Local lightweight LaTeX document editor based on [LaTeX.js](https://latex.js.org/) for LaTeX rendering. Electron app. 
