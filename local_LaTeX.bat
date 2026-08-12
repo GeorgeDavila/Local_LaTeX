@@ -1,0 +1,3 @@
+@echo off
+echo Running LaTeX compiler locally...
+npm start
