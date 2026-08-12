@@ -84,6 +84,26 @@ async function save2tex(input, currentName) {
   }
 }
 
+function pdfNameFromTex(name) {
+  return String(name || "document.tex").replace(/\.tex$/i, "") + ".pdf";
+}
+
+async function exportPreviewPdf(html, currentName) {
+  if (!html) {
+    alert("Preview is not ready yet.");
+    return null;
+  }
+
+  try {
+    const result = await window.loa.exportPdf(html, pdfNameFromTex(currentName));
+    if (result?.canceled) return null;
+    return result.path;
+  } catch (e) {
+    alert(`Export failed: ${e.message}`);
+    return null;
+  }
+}
+
 async function createNewProject() {
   const name = await openNameDialog({
     title: "New project",

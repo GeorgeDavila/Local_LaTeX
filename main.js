@@ -51,6 +51,61 @@ ipcMain.handle("new-project", async (_event, filename, content) => {
   return { name, path: filePath };
 });
 
+function safePdfName(filename) {
+  const raw = path.basename(String(filename || "document.pdf"));
+  const base = raw.replace(/\.(tex|pdf)$/i, "") || "document";
+  const safe = base.replace(/[<>:"|?*\\/]/g, "_");
+  return `${safe}.pdf`;
+}
+
+async function htmlToPdfBuffer(html) {
+  const tmpHtml = path.join(
+    app.getPath("temp"),
+    `local-latex-${process.pid}-${Date.now()}.html`
+  );
+  fs.writeFileSync(tmpHtml, html ?? "", "utf8");
+
+  const pdfWin = new BrowserWindow({
+    show: false,
+    width: 850,
+    height: 1100,
+    webPreferences: {
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  try {
+    await pdfWin.loadFile(tmpHtml);
+    await pdfWin.webContents.executeJavaScript(
+      "document.fonts.ready.then(() => new Promise((r) => setTimeout(r, 250)))"
+    );
+    return await pdfWin.webContents.printToPDF({
+      printBackground: true,
+      preferCSSPageSize: true,
+    });
+  } finally {
+    pdfWin.destroy();
+    fs.unlink(tmpHtml, () => {});
+  }
+}
+
+ipcMain.handle("export-pdf", async (event, html, suggestedName) => {
+  const parent = BrowserWindow.fromWebContents(event.sender);
+  ensureProjectsDir();
+  const { canceled, filePath } = await dialog.showSaveDialog(parent, {
+    title: "Export PDF",
+    defaultPath: path.join(projectsDir, safePdfName(suggestedName)),
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+  });
+  if (canceled || !filePath) return { canceled: true };
+
+  const pdfData = await htmlToPdfBuffer(html);
+  fs.writeFileSync(filePath, pdfData);
+  return { canceled: false, path: filePath };
+});
+
 let isDirty = false;
 ipcMain.on("set-dirty", (_event, dirty) => {
   isDirty = !!dirty;

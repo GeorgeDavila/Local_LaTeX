@@ -25,6 +25,7 @@
       <!-- <a href="#" class="active">Home</a> -->
       <a href="#" id="projects-btn">Projects</a>
       <a href="#" id="save-btn">Save</a>
+      <a href="#" id="export-btn">Export</a>
     </nav>
     <div class="logo">
       <!-- <span>{ }</span> -->
@@ -288,6 +289,45 @@ and ‘$-$’ minus sign.
         e.preventDefault();
         performSave();
       }
+    });
+
+    const exportBtn = document.getElementById("export-btn");
+
+    function flashNavButton(btn, label) {
+      const original = btn.dataset.label || btn.textContent;
+      btn.dataset.label = original;
+      btn.classList.remove("saved");
+      btn.classList.add("saving");
+      btn.textContent = label;
+      void btn.offsetWidth;
+      btn.classList.add("saved");
+      clearTimeout(btn._savedTimer);
+      btn._savedTimer = setTimeout(() => {
+        btn.classList.remove("saving", "saved");
+        btn.textContent = original;
+      }, 900);
+    }
+
+    async function performExport() {
+      let html;
+      try {
+        generator.reset();
+        const newDoc = parse(editor.getValue(), { generator }).htmlDocument(LATEX_CDN);
+        html = "<!DOCTYPE html>\n" + newDoc.documentElement.outerHTML;
+      } catch (e) {
+        alert(`Could not build preview for PDF: ${e.message}`);
+        return false;
+      }
+
+      const exported = await exportPreviewPdf(html, currentProject);
+      if (!exported) return false;
+      flashNavButton(exportBtn, "Exported ✓");
+      return true;
+    }
+
+    exportBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      await performExport();
     });
 
     function setProjectsSidebarOpen(open) {

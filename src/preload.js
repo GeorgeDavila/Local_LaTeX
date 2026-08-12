@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld("loa", {
   loadTex: (filename) => ipcRenderer.invoke("load-tex", filename),
   newProject: (filename, content) =>
     ipcRenderer.invoke("new-project", filename, content),
+  exportPdf: (html, suggestedName) =>
+    ipcRenderer.invoke("export-pdf", html, suggestedName),
   setDirty: (dirty) => ipcRenderer.send("set-dirty", dirty),
   onRequestSaveBeforeClose: (handler) => {
     ipcRenderer.on("request-save-before-close", async () => {

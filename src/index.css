@@ -40,6 +40,7 @@ header nav a {
 }
 header nav a:hover, header nav a.active { color: white; }
 #save-btn,
+#export-btn,
 #projects-btn {
   display: inline-flex;
   align-items: center;
@@ -52,20 +53,24 @@ header nav a:hover, header nav a.active { color: white; }
   font-weight: 700;
 }
 #save-btn:hover,
+#export-btn:hover,
 #projects-btn:hover {
   background: #2d9961;
   color: white;
 }
-#save-btn {
+#save-btn,
+#export-btn {
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
-#save-btn.saving {
+#save-btn.saving,
+#export-btn.saving {
   pointer-events: none;
   background: #2d9961;
   color: white;
   animation: save-pulse 0.55s ease;
 }
-#save-btn.saved {
+#save-btn.saved,
+#export-btn.saved {
   background: #2d9961;
   color: white;
   box-shadow: 0 0 0 3px rgba(45, 153, 97, 0.35);
