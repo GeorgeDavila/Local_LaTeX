@@ -8,47 +8,128 @@ function ensureProjectsDir() {
   fs.mkdirSync(projectsDir, { recursive: true });
 }
 
-function safeTexName(filename) {
+function assertInside(root, target) {
+  const rel = path.relative(path.resolve(root), path.resolve(target));
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error("Invalid path");
+  }
+}
+
+function safeProjectName(name) {
+  const raw = path.basename(String(name || "untitled").trim());
+  const base = raw.replace(/\.(tex|pdf)$/i, "");
+  return base.replace(/[<>:"|?*\\/]/g, "_").replace(/^\.+$/, "") || "untitled";
+}
+
+function safeTexName(filename, fallback = "document.tex") {
   const safe = path
-    .basename(String(filename || "document.tex"))
+    .basename(String(filename || fallback))
     .replace(/[<>:"|?*\\/]/g, "_");
   return /\.tex$/i.test(safe) ? safe : `${safe}.tex`;
 }
 
-ipcMain.handle("save-tex", async (_event, filename, content) => {
-  ensureProjectsDir();
-  const name = safeTexName(filename);
-  const filePath = path.join(projectsDir, name);
-  fs.writeFileSync(filePath, content ?? "", "utf8");
-  return { name, path: filePath };
-});
+function projectDir(name) {
+  const project = safeProjectName(name);
+  const dir = path.join(projectsDir, project);
+  assertInside(projectsDir, dir);
+  return { name: project, dir };
+}
 
-ipcMain.handle("list-projects", async () => {
-  ensureProjectsDir();
+function listTexFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
   return fs
-    .readdirSync(projectsDir)
+    .readdirSync(dir)
     .filter((f) => f.toLowerCase().endsWith(".tex"))
     .sort((a, b) => a.localeCompare(b));
+}
+
+function pickTexFile(dir, projectName, requested) {
+  const texFiles = listTexFiles(dir);
+  if (requested) {
+    const want = safeTexName(requested);
+    const match = texFiles.find((f) => f.toLowerCase() === want.toLowerCase());
+    if (match) return match;
+  }
+  const preferred = `${projectName}.tex`;
+  const named = texFiles.find((f) => f.toLowerCase() === preferred.toLowerCase());
+  if (named) return named;
+  const main = texFiles.find((f) => f.toLowerCase() === "main.tex");
+  if (main) return main;
+  if (texFiles.length) return texFiles[0];
+  return preferred;
+}
+
+function migrateLooseTexFiles() {
+  ensureProjectsDir();
+  for (const entry of fs.readdirSync(projectsDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".tex")) continue;
+    const { name, dir } = projectDir(entry.name);
+    fs.mkdirSync(dir, { recursive: true });
+    const destTex = path.join(dir, `${name}.tex`);
+    const srcTex = path.join(projectsDir, entry.name);
+    if (!fs.existsSync(destTex)) fs.renameSync(srcTex, destTex);
+    const srcPdf = path.join(projectsDir, `${name}.pdf`);
+    const destPdf = path.join(dir, `${name}.pdf`);
+    if (fs.existsSync(srcPdf) && !fs.existsSync(destPdf)) {
+      fs.renameSync(srcPdf, destPdf);
+    }
+  }
+}
+
+ipcMain.handle("save-tex", async (_event, projectName, content, texFile) => {
+  migrateLooseTexFiles();
+  const { name, dir } = projectDir(projectName);
+  fs.mkdirSync(dir, { recursive: true });
+  const file = requestedTexName(dir, name, texFile);
+  const filePath = path.join(dir, file);
+  assertInside(dir, filePath);
+  fs.writeFileSync(filePath, content ?? "", "utf8");
+  return { name, texFile: file, path: filePath };
 });
 
-ipcMain.handle("load-tex", async (_event, filename) => {
-  const name = safeTexName(filename);
-  const filePath = path.join(projectsDir, name);
-  if (!fs.existsSync(filePath)) {
+function requestedTexName(dir, projectName, texFile) {
+  if (texFile) return safeTexName(texFile, `${projectName}.tex`);
+  return pickTexFile(dir, projectName);
+}
+
+ipcMain.handle("list-projects", async () => {
+  migrateLooseTexFiles();
+  return fs
+    .readdirSync(projectsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && !d.name.startsWith("."))
+    .map((d) => ({
+      name: d.name,
+      texFiles: listTexFiles(path.join(projectsDir, d.name)),
+    }))
+    .filter((p) => p.texFiles.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+});
+
+ipcMain.handle("load-tex", async (_event, projectName, texFile) => {
+  migrateLooseTexFiles();
+  const { name, dir } = projectDir(projectName);
+  if (!fs.existsSync(dir)) {
     throw new Error(`Project not found: ${name}`);
   }
-  return { name, content: fs.readFileSync(filePath, "utf8") };
+  const file = pickTexFile(dir, name, texFile);
+  const filePath = path.join(dir, file);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`No .tex file in project: ${name}`);
+  }
+  return { name, texFile: file, content: fs.readFileSync(filePath, "utf8") };
 });
 
-ipcMain.handle("new-project", async (_event, filename, content) => {
-  ensureProjectsDir();
-  const name = safeTexName(filename);
-  const filePath = path.join(projectsDir, name);
-  if (fs.existsSync(filePath)) {
+ipcMain.handle("new-project", async (_event, projectName, content) => {
+  migrateLooseTexFiles();
+  const { name, dir } = projectDir(projectName);
+  if (fs.existsSync(dir)) {
     throw new Error(`Project already exists: ${name}`);
   }
+  fs.mkdirSync(dir, { recursive: true });
+  const texFile = `${name}.tex`;
+  const filePath = path.join(dir, texFile);
   fs.writeFileSync(filePath, content ?? "", "utf8");
-  return { name, path: filePath };
+  return { name, texFile, path: filePath };
 });
 
 function safePdfName(filename) {
@@ -93,10 +174,15 @@ async function htmlToPdfBuffer(html) {
 
 ipcMain.handle("export-pdf", async (event, html, suggestedName) => {
   const parent = BrowserWindow.fromWebContents(event.sender);
-  ensureProjectsDir();
+  migrateLooseTexFiles();
+  let defaultDir = projectsDir;
+  if (suggestedName) {
+    const { dir } = projectDir(suggestedName);
+    if (fs.existsSync(dir)) defaultDir = dir;
+  }
   const { canceled, filePath } = await dialog.showSaveDialog(parent, {
     title: "Export PDF",
-    defaultPath: path.join(projectsDir, safePdfName(suggestedName)),
+    defaultPath: path.join(defaultDir, safePdfName(suggestedName)),
     filters: [{ name: "PDF", extensions: ["pdf"] }],
   });
   if (canceled || !filePath) return { canceled: true };

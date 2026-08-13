@@ -180,14 +180,54 @@ header nav a:hover, header nav a.active { color: white; }
   text-overflow: ellipsis;
 }
 #project-list button:hover { background: #2a2b26; }
-#project-list button.active {
+#project-list .file-btn.active {
   background: #2d9961;
   color: white;
+}
+#project-list .folder-toggle.current {
+  color: #7dcea0;
 }
 #project-list .empty {
   padding: 1rem 0.9rem;
   color: #777;
   font-size: 0.85rem;
+}
+#project-list .folder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+#project-list .caret {
+  display: inline-block;
+  width: 0.7em;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  color: #a6a69c;
+  transform: translateY(-0.02em);
+}
+#project-list .folder-toggle .caret::before {
+  content: "▶";
+}
+#project-list .folder-toggle[aria-expanded="true"] .caret::before {
+  content: "▼";
+}
+#project-list .folder-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#project-list .project-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#project-list .project-files[hidden] {
+  display: none;
+}
+#project-list .file-btn {
+  padding-left: 1.85rem;
+  font-size: 0.85rem;
+  font-weight: 400;
 }
 
 #playground {

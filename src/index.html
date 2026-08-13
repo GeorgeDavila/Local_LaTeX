@@ -60,8 +60,8 @@
     <div class="modal-backdrop" data-close-name></div>
     <div class="modal-panel" role="dialog" aria-labelledby="name-modal-title" aria-modal="true">
       <h2 id="name-modal-title">Name project</h2>
-      <p id="name-modal-desc">Choose a name. It will be saved under <code>tex_projects</code>.</p>
-      <label for="name-filename">Filename</label>
+      <p id="name-modal-desc">Choose a name. It will be created as a folder under <code>tex_projects</code>.</p>
+      <label for="name-filename">Project name</label>
       <input id="name-filename" type="text" spellcheck="false" autocomplete="off">
       <div class="modal-actions">
         <button type="button" class="btn-secondary" data-close-name>Cancel</button>
@@ -173,11 +173,21 @@ and ‘$-$’ minus sign.
     editor.setValue(showcase);
 
     let currentProject = null;
+    let currentTexFile = null;
     let lastSavedContent = editor.getValue();
     const currentProjectNameEl = document.getElementById("current-project-name");
     const projectsBtn = document.getElementById("projects-btn");
     const projectsSidebar = document.getElementById("projects-sidebar");
     const projectList = document.getElementById("project-list");
+
+    function projectLabel() {
+      if (!currentProject) return "Untitled";
+      const base = (currentTexFile || "").replace(/\.tex$/i, "");
+      if (currentTexFile && base && base !== currentProject) {
+        return `${currentProject}/${currentTexFile}`;
+      }
+      return currentProject;
+    }
 
     function isDirty() {
       return editor.getValue() !== lastSavedContent;
@@ -186,7 +196,7 @@ and ‘$-$’ minus sign.
     function updateDirtyState() {
       const dirty = isDirty();
       window.loa.setDirty(dirty);
-      const base = currentProject || "Untitled";
+      const base = projectLabel();
       currentProjectNameEl.textContent = dirty ? `${base} *` : base;
     }
 
@@ -200,13 +210,16 @@ and ‘$-$’ minus sign.
       return confirm("You have unsaved changes. Discard them and continue?");
     }
 
-    function setCurrentProject(name) {
+    function setCurrentProject(name, texFile) {
       currentProject = name || null;
+      currentTexFile = texFile || null;
       updateDirtyState();
     }
 
     editor.on("change", updateDirtyState);
     updateDirtyState();
+
+    const expandedProjects = new Set();
 
     async function refreshProjectList() {
       let projects = [];
@@ -225,27 +238,70 @@ and ‘$-$’ minus sign.
         return;
       }
 
-      for (const name of projects) {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = name;
-        btn.title = name;
-        if (name === currentProject) btn.classList.add("active");
-        btn.addEventListener("click", () => openProject(name));
-        li.appendChild(btn);
-        projectList.appendChild(li);
+      for (const project of projects) {
+        appendProjectFolder(project.name, project.texFiles || []);
       }
     }
 
-    async function openProject(name) {
-      if (name === currentProject) return;
+    function appendProjectFolder(projectName, texFiles) {
+      const li = document.createElement("li");
+      li.className = "project-folder";
+
+      const open = expandedProjects.has(projectName);
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "folder-toggle";
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.title = projectName;
+      if (projectName === currentProject) toggle.classList.add("current");
+
+      const caret = document.createElement("span");
+      caret.className = "caret";
+      caret.setAttribute("aria-hidden", "true");
+
+      const label = document.createElement("span");
+      label.className = "folder-name";
+      label.textContent = projectName;
+
+      toggle.append(caret, label);
+      toggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (expandedProjects.has(projectName)) expandedProjects.delete(projectName);
+        else expandedProjects.add(projectName);
+        refreshProjectList();
+      });
+
+      const files = document.createElement("ul");
+      files.className = "project-files";
+      if (!open) files.hidden = true;
+
+      for (const texFile of texFiles) {
+        const fileLi = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "file-btn";
+        btn.textContent = texFile;
+        btn.title = `${projectName}/${texFile}`;
+        if (projectName === currentProject && texFile === currentTexFile) {
+          btn.classList.add("active");
+        }
+        btn.addEventListener("click", () => openProject(projectName, texFile));
+        fileLi.appendChild(btn);
+        files.appendChild(fileLi);
+      }
+
+      li.append(toggle, files);
+      projectList.appendChild(li);
+    }
+
+    async function openProject(name, texFile) {
+      if (name === currentProject && (!texFile || texFile === currentTexFile)) return;
       if (!confirmDiscard()) return;
       try {
-        const { name: loadedName, content } = await window.loa.loadTex(name);
-        setCurrentProject(loadedName);
-        editor.setValue(content);
-        markSaved(content);
+        const loaded = await window.loa.loadTex(name, texFile);
+        setCurrentProject(loaded.name, loaded.texFile);
+        editor.setValue(loaded.content);
+        markSaved(loaded.content);
         await refreshProjectList();
       } catch (e) {
         alert(`Could not open project: ${e.message}`);
@@ -255,10 +311,10 @@ and ‘$-$’ minus sign.
     const saveBtn = document.getElementById("save-btn");
 
     async function performSave() {
-      const saved = await save2tex(editor.getValue(), currentProject);
+      const saved = await save2tex(editor.getValue(), currentProject, currentTexFile);
       if (!saved) return false;
 
-      setCurrentProject(saved);
+      setCurrentProject(saved.name, saved.texFile);
       markSaved();
       await refreshProjectList();
 
@@ -351,7 +407,8 @@ and ‘$-$’ minus sign.
       if (!confirmDiscard()) return;
       const created = await createNewProject();
       if (!created) return;
-      setCurrentProject(created.name);
+      expandedProjects.add(created.name);
+      setCurrentProject(created.name, created.texFile);
       editor.setValue(created.content);
       markSaved(created.content);
       setProjectsSidebarOpen(true);

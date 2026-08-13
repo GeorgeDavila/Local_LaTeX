@@ -1,12 +1,13 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("loa", {
-  saveTex: (filename, content) =>
-    ipcRenderer.invoke("save-tex", filename, content),
+  saveTex: (projectName, content, texFile) =>
+    ipcRenderer.invoke("save-tex", projectName, content, texFile),
   listProjects: () => ipcRenderer.invoke("list-projects"),
-  loadTex: (filename) => ipcRenderer.invoke("load-tex", filename),
-  newProject: (filename, content) =>
-    ipcRenderer.invoke("new-project", filename, content),
+  loadTex: (projectName, texFile) =>
+    ipcRenderer.invoke("load-tex", projectName, texFile),
+  newProject: (projectName, content) =>
+    ipcRenderer.invoke("new-project", projectName, content),
   exportPdf: (html, suggestedName) =>
     ipcRenderer.invoke("export-pdf", html, suggestedName),
   setDirty: (dirty) => ipcRenderer.send("set-dirty", dirty),
